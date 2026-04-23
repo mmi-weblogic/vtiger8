@@ -42,7 +42,7 @@
 
         </div>
     </div>
-    <a href="index.php?module=Users&view=index" class="btn btn-default"><i class="fa fa-arrow-left"></i> Back to My Preferences</a>
+    <a href="index.php?module=Users&parent=Settings&view=Detail&record={$RECORD_ID}" class="btn btn-default"><i class="fa fa-arrow-left"></i> Back to My Preferences</a>
 </div>
 </div>
 
@@ -71,7 +71,7 @@ jQuery(document).ready(function() {
     jQuery('#btn-enable').on('click', function() {
         var code = jQuery('#totp-verify-code').val().trim();
         jQuery.post('index.php', {module:'Users', action:'TwoFactorSetup', mode:'enable', code: code}, function(res) {
-            if (res && res.success) {
+            if (res && res.result && res.result.success) {
                 location.reload();
             } else {
                 jQuery('#enable-error').text(res.error && res.error.message ? res.error.message : 'Invalid code. Try again.').show();

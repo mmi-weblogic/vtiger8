@@ -13,6 +13,7 @@ class Users_TwoFactorSetup_View extends Vtiger_Index_View {
 		$viewer = $this->getViewer($request);
 		$viewer->assign('TOTP_ENABLED', !empty($row['totp_enabled']));
 		$viewer->assign('USERNAME', $currentUser->get('user_name'));
+		$viewer->assign('RECORD_ID', $userId);
 		$viewer->view('TwoFactorSetup.tpl', 'Users');
 	}
 }
