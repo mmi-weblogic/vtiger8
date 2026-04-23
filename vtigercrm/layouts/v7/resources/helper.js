@@ -537,6 +537,7 @@ jQuery.Class("Vtiger_Helper_Js",{
                     'template' : '<div data-notify="container" class="col-xs-11 col-sm-3 vt-notification vt-notification-{0}" role="alert">' +
                                     '<div class="notificationHeader">'+
                                         '<button type="button" aria-hidden="true" class="close pull-right" data-notify="dismiss">×</button>' +
+                                        '<button type="button" aria-hidden="true" class="close pull-right vt-notify-toggle" style="margin-right:6px;font-size:12px;opacity:0.7;" title="Collapse/Expand">&#x25BC;</button>' +
                                         '<span data-notify="icon"></span> ' +
                                         '<span data-notify="title">{1}</span> ' +
                                     '</div>'+

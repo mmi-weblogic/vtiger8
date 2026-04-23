@@ -11,6 +11,23 @@
 -->*}
 {strip}
     <div class="col-lg-6 detailViewButtoncontainer">
+        {if isset($RECORD_LOCK_USER)}
+        <div class="pull-right" style="margin-right:10px;margin-top:5px;">
+            <span class="label label-warning" style="font-size:12px;padding:5px 10px;">
+                <i class="fa fa-lock"></i> Being edited by {$RECORD_LOCK_USER}
+            </span>
+        </div>
+        {/if}
+        {if isset($RECORD_LOCK_ERROR)}
+        <script>
+        var vtLockErrorMsg = '{$RECORD_LOCK_ERROR|escape:"javascript"}';
+        {literal}
+        jQuery(document).ready(function() {
+            jQuery.notify({message: vtLockErrorMsg}, {type: 'warning', delay: 6000});
+        });
+        {/literal}
+        </script>
+        {/if}
         <div class="pull-right btn-toolbar">
             <div class="btn-group">
             {assign var=STARRED value=$RECORD->get('starred')}

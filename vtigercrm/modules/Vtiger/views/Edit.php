@@ -55,16 +55,36 @@ Class Vtiger_Edit_View extends Vtiger_Index_View {
 		$viewer->assign('MODULE_SETTING_ACTIONS', $settingLinks);
 	}
 
-	function preProcess(Vtiger_Request $request, $display=true) { 
+	function preProcess(Vtiger_Request $request, $display=true) {
 		//Vtiger7 - TO show custom view name in Module Header
-		$viewer = $this->getViewer ($request); 
-		$moduleName = $request->getModule(); 
-		$viewer->assign('CUSTOM_VIEWS', CustomView_Record_Model::getAllByGroup($moduleName)); 
+		$viewer = $this->getViewer ($request);
+		$moduleName = $request->getModule();
+		$viewer->assign('CUSTOM_VIEWS', CustomView_Record_Model::getAllByGroup($moduleName));
 		$moduleModel = Vtiger_Module_Model::getInstance($moduleName);
-		$record = $request->get('record'); 
-		if(!empty($record) && $moduleModel->isEntityModule()) { 
-			$recordModel = $this->record?$this->record:Vtiger_Record_Model::getInstanceById($record, $moduleName); 
-			$viewer->assign('RECORD',$recordModel); 
+		$record = $request->get('record');
+		if(!empty($record) && $moduleModel->isEntityModule()) {
+			$recordModel = $this->record?$this->record:Vtiger_Record_Model::getInstanceById($record, $moduleName);
+			$viewer->assign('RECORD',$recordModel);
+
+			// Record locking: check if another user holds an active lock
+			$currentUser = Users_Record_Model::getCurrentUserModel();
+			$db = PearDatabase::getInstance();
+			$lockResult = $db->pquery(
+				'SELECT locked_by, locked_time FROM vtiger_crmentity WHERE crmid = ?',
+				array($record)
+			);
+			$lockRow  = $db->fetch_array($lockResult);
+			$lockedBy = (int) $lockRow['locked_by'];
+			$expired  = !$lockRow['locked_time'] || (time() - strtotime($lockRow['locked_time'])) >= 600;
+
+			if ($lockedBy && $lockedBy !== (int)$currentUser->getId() && !$expired) {
+				$userRes  = $db->pquery('SELECT first_name, last_name FROM vtiger_users WHERE id = ?', array($lockedBy));
+				$userRow  = $db->fetch_array($userRes);
+				$lockedByName = trim($userRow['first_name'] . ' ' . $userRow['last_name']);
+				$_SESSION['record_lock_error'] = "This record is currently being edited by {$lockedByName}. Please try again later.";
+				header('Location: index.php?module=' . $moduleName . '&view=Detail&record=' . $record);
+				exit;
+			}
 		}  
 
 		$duplicateRecordsList = array();

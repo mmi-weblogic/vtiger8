@@ -99,6 +99,34 @@ class Vtiger_Detail_View extends Vtiger_Index_View {
 		$viewer->assign('RECORD', $recordModel);
 		$viewer->assign('NAVIGATION', $navigationInfo);
 
+		// Pass and clear the record lock error flash message
+		if (!empty($_SESSION['record_lock_error'])) {
+			$viewer->assign('RECORD_LOCK_ERROR', $_SESSION['record_lock_error']);
+			unset($_SESSION['record_lock_error']);
+		}
+
+		// Show lock indicator if record is actively locked by another user
+		$currentUser = Users_Record_Model::getCurrentUserModel();
+		$lockDb = PearDatabase::getInstance();
+		$lockRes = $lockDb->pquery(
+			'SELECT locked_by, locked_time FROM vtiger_crmentity WHERE crmid = ?',
+			array($recordId)
+		);
+		$lockRow  = $lockDb->fetch_array($lockRes);
+		$lockedBy = (int) $lockRow['locked_by'];
+		$lockExpired = !$lockRow['locked_time'] || (time() - strtotime($lockRow['locked_time'])) >= 600;
+		if ($lockedBy && $lockedBy !== (int)$currentUser->getId() && !$lockExpired) {
+			$userRes = $lockDb->pquery('SELECT first_name, last_name FROM vtiger_users WHERE id = ?', array($lockedBy));
+			$userRow = $lockDb->fetch_array($userRes);
+			$viewer->assign('RECORD_LOCK_USER', trim($userRow['first_name'] . ' ' . $userRow['last_name']));
+		} elseif ($lockedBy && $lockExpired) {
+			// Auto-clear stale lock
+			$lockDb->pquery(
+				'UPDATE vtiger_crmentity SET locked_by = NULL, locked_time = NULL WHERE crmid = ?',
+				array($recordId)
+			);
+		}
+
 		//Intially make the prev and next records as null
 		$prevRecordId = null;
 		$nextRecordId = null;

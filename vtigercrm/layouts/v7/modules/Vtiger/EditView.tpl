@@ -7,6 +7,45 @@
 * All Rights Reserved.
 ************************************************************************************}
 
+{if $RECORD_ID neq ''}
+<script type="text/javascript">
+var vtRecordId   = '{$RECORD_ID}';
+var vtModuleName = '{$MODULE}';
+{literal}
+jQuery(document).ready(function() {
+    var lockAcquired = false;
+    var keepaliveTimer;
+
+    function releaseLock() {
+        if (!lockAcquired) return;
+        navigator.sendBeacon('index.php', new URLSearchParams(
+            'module=' + vtModuleName + '&action=LockRecord&mode=release&record=' + vtRecordId
+        ));
+        lockAcquired = false;
+    }
+
+    jQuery.post('index.php', {module: vtModuleName, action: 'LockRecord', mode: 'acquire', record: vtRecordId}, function(res) {
+        if (res && res.result && res.result.locked) {
+            alert('This record is now being edited by ' + res.result.locked_by + '. You will be redirected.');
+            window.location.href = 'index.php?module=' + vtModuleName + '&view=Detail&record=' + vtRecordId;
+        } else {
+            lockAcquired = true;
+            keepaliveTimer = setInterval(function() {
+                jQuery.post('index.php', {module: vtModuleName, action: 'LockRecord', mode: 'keepalive', record: vtRecordId});
+            }, 120000);
+        }
+    }, 'json');
+
+    jQuery(window).on('beforeunload', releaseLock);
+
+    jQuery('#EditView, #edit').on('submit', function() {
+        clearInterval(keepaliveTimer);
+        lockAcquired = false;
+    });
+});
+{/literal}
+</script>
+{/if}
 {strip}
 	<div class="main-container clearfix">
 		<div id="modnavigator" class="module-nav editViewModNavigator">

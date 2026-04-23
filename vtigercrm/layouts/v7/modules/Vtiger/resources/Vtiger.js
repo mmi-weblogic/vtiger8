@@ -304,6 +304,22 @@ Vtiger.Class('Vtiger_Index_Js', {
 			}).then(function(e,res) {});
 		});
 		jQuery('#reminder-postpone-'+record.id).closest('[data-notify="container"]').draggable({'containment' : 'body'});
+
+		// Register collapse/expand toggle once via delegation
+		if (!jQuery('body').data('vt-notify-toggle-bound')) {
+			jQuery('body').data('vt-notify-toggle-bound', true);
+			jQuery('body').on('click', '.vt-notify-toggle', function() {
+				var $btn = jQuery(this);
+				var $msg = $btn.closest('[data-notify="container"]').find('[data-notify="message"]');
+				if ($msg.is(':visible')) {
+					$msg.slideUp(150);
+					$btn.html('&#x25B6;');
+				} else {
+					$msg.slideDown(150);
+					$btn.html('&#x25BC;');
+				}
+			});
+		}
 	}
 
 }, {

@@ -115,6 +115,18 @@ class Vtiger_Save_Action extends Vtiger_Action_Controller {
 			}
 		}
 		$recordModel->save();
+
+		// Release record lock on save
+		$savedId = $recordModel->getId();
+		if ($savedId) {
+			$currentUser = Users_Record_Model::getCurrentUserModel();
+			$db = PearDatabase::getInstance();
+			$db->pquery(
+				'UPDATE vtiger_crmentity SET locked_by = NULL, locked_time = NULL WHERE crmid = ? AND locked_by = ?',
+				array($savedId, $currentUser->getId())
+			);
+		}
+
 		if($request->get('relationOperation')) {
 			$parentModuleName = $request->get('sourceModule');
 			$parentModuleModel = Vtiger_Module_Model::getInstance($parentModuleName);
