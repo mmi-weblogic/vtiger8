@@ -43,6 +43,14 @@ class Vtiger_WebUI extends Vtiger_EntryPoint {
 		if (!$user && isset($_SESSION['authenticated_user_id'])) {
 			$userid = Vtiger_Session::get('AUTHUSERID', $_SESSION['authenticated_user_id']);
 			if ($userid && vglobal('application_unique_key')==$_SESSION['app_unique_key']) {
+				// Enforce single concurrent session: reject if another login has taken over
+				$db = PearDatabase::getInstance();
+				$result = $db->pquery('SELECT current_session_id FROM vtiger_users WHERE id = ? AND deleted = 0', array($userid));
+				$row = $db->fetch_array($result);
+				if ($row && !empty($row['current_session_id']) && $row['current_session_id'] !== session_id()) {
+					Vtiger_Session::destroy(session_id());
+					return null;
+				}
 				$user = CRMEntity::getInstance('Users');
 				$user->retrieveCurrentUserInfoFromFile($userid);
 				$this->setLogin($user);

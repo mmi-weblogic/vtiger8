@@ -7,6 +7,42 @@
 * All Rights Reserved.
 ************************************************************************************}
 
+{if $RECORD_ID eq ''}
+<script type="text/javascript">
+jQuery(document).ready(function() {
+    jQuery('#EditView').on('submit', function(e) {
+        e.preventDefault();
+        var $form = jQuery(this);
+        jQuery.ajax({
+            url: 'index.php',
+            type: 'POST',
+            data: { module: 'Users', action: 'SaveAjax', mode: 'checkLicense' },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.result && response.result.exceeded) {
+                    var msg = 'Total user licenses have been exceeded. Please email support@weblogic.co.bw to request more licenses.';
+                    jQuery('<div class="modal fade" id="licenseErrorModal" tabindex="-1" role="dialog">'
+                        + '<div class="modal-dialog"><div class="modal-content">'
+                        + '<div class="modal-header" style="background:#d9534f;color:#fff;border-radius:4px 4px 0 0;">'
+                        + '<h4 style="color:#fff;margin:0;">&#9888; License Limit Reached</h4>'
+                        + '</div>'
+                        + '<div class="modal-body"><p>' + msg + '</p></div>'
+                        + '<div class="modal-footer">'
+                        + '<button type="button" class="btn btn-danger" data-dismiss="modal" onclick="jQuery(\'#licenseErrorModal\').modal(\'hide\')">OK</button>'
+                        + '</div></div></div></div>'
+                    ).appendTo('body').modal('show');
+                } else {
+                    $form.off('submit').submit();
+                }
+            },
+            error: function() {
+                $form.off('submit').submit();
+            }
+        });
+    });
+});
+</script>
+{/if}
 <div class="editViewPageDiv detailViewContainer">
     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
         <form class="form-horizontal recordEditView" id="EditView" name="EditView" method="post" action="index.php" enctype="multipart/form-data">

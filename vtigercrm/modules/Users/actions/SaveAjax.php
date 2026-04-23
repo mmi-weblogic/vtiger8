@@ -21,6 +21,7 @@ class Users_SaveAjax_Action extends Vtiger_SaveAjax_Action {
 		$this->exposeMethod('transferOwner');
 		$this->exposeMethod('changeUsername');
 		$this->exposeMethod('changeAccessKey');
+		$this->exposeMethod('checkLicense');
 	}
     
     public function requiresPermission(\Vtiger_Request $request) {
@@ -318,6 +319,27 @@ class Users_SaveAjax_Action extends Vtiger_SaveAjax_Action {
 		} catch (Exception $ex) {
 			$response->setError($ex->getMessage());
 		}
+		$response->emit();
+	}
+
+	public function checkLicense(Vtiger_Request $request) {
+		$response = new Vtiger_Response();
+		global $user_license_count;
+		if (!empty($user_license_count)) {
+			$db = PearDatabase::getInstance();
+			$result = $db->pquery(
+				"SELECT COUNT(*) as cnt FROM vtiger_users WHERE deleted = 0 AND status = 'Active'",
+				array()
+			);
+			$row = $db->fetch_array($result);
+			$activeUserCount = (int) $row['cnt'];
+			if ($activeUserCount >= (int) $user_license_count) {
+				$response->setResult(array('exceeded' => true));
+				$response->emit();
+				return;
+			}
+		}
+		$response->setResult(array('exceeded' => false));
 		$response->emit();
 	}
 }

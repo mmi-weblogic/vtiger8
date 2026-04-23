@@ -17,6 +17,14 @@ class Users_Logout_Action extends Vtiger_Action_Controller {
 	function process(Vtiger_Request $request) {
 		//Redirect into the referer page
 		$logoutURL = $this->getLogoutURL();
+
+		// Clear the stored session so a fresh login is allowed
+		$userid = Vtiger_Session::get('AUTHUSERID', isset($_SESSION['authenticated_user_id']) ? $_SESSION['authenticated_user_id'] : null);
+		if ($userid) {
+			$db = PearDatabase::getInstance();
+			$db->pquery('UPDATE vtiger_users SET current_session_id = NULL WHERE id = ?', array($userid));
+		}
+
         session_regenerate_id(true);
 		Vtiger_Session::destroy();
 		
