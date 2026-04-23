@@ -143,6 +143,19 @@ class Users_Save_Action extends Vtiger_Save_Action {
 			if ($status == true) {
 				throw new AppException(vtranslate('LBL_DUPLICATE_USER_EXISTS', $module));
 			}
+			global $user_license_count;
+			if (!empty($user_license_count)) {
+				$db = PearDatabase::getInstance();
+				$result = $db->pquery(
+					"SELECT COUNT(*) as cnt FROM vtiger_users WHERE deleted = 0 AND status = 'Active'",
+					array()
+				);
+				$row = $db->fetch_array($result);
+				$activeUserCount = (int) $row['cnt'];
+				if ($activeUserCount >= (int) $user_license_count) {
+					throw new AppException('Total user licenses have been exceeded. Please email support@weblogic.co.bw to request more licenses.');
+				}
+			}
 		} else {
 			$this->checkRestrictedValueChange($request);
 		}
