@@ -8,6 +8,8 @@
  * All Rights Reserved.
  ************************************************************************************/
 
+require_once 'include/utils/TOTP.php';
+
 class Users_Login_Action extends Vtiger_Action_Controller {
 
 	function loginRequired() {
@@ -16,7 +18,7 @@ class Users_Login_Action extends Vtiger_Action_Controller {
 
 	function checkPermission(Vtiger_Request $request) {
 		return true;
-	} 
+	}
 
 	function process(Vtiger_Request $request) {
 		if ($_SERVER["REQUEST_METHOD"] != "POST") {
@@ -31,46 +33,54 @@ class Users_Login_Action extends Vtiger_Action_Controller {
 		$user->column_fields['user_name'] = $username;
 
 		if ($user->doLogin($password)) {
-			session_regenerate_id(true); // to overcome session id reuse.
-
 			$userid = $user->retrieve_user_id($username);
-			Vtiger_Session::set('AUTHUSERID', $userid);
 
-			// Enforce single concurrent session per user
-			$db = PearDatabase::getInstance();
-			$db->pquery('UPDATE vtiger_users SET current_session_id = ? WHERE id = ?', array(session_id(), $userid));
+			// Check if 2FA is enabled for this user
+			$db     = PearDatabase::getInstance();
+			$result = $db->pquery('SELECT totp_enabled, totp_secret FROM vtiger_users WHERE id = ?', array($userid));
+			$row    = $db->fetch_array($result);
 
-			// For Backward compatability
-			// TODO Remove when switch-to-old look is not needed
-			$_SESSION['authenticated_user_id'] = $userid;
-			$_SESSION['app_unique_key'] = vglobal('application_unique_key');
-			$_SESSION['authenticated_user_language'] = vglobal('default_language');
-			$_SESSION['authenticated_user_skin'] = $request->get('skin');
-
-			//Enabled session variable for KCFINDER 
-			$_SESSION['KCFINDER'] = array(); 
-			$_SESSION['KCFINDER']['disabled'] = false; 
-			$_SESSION['KCFINDER']['uploadURL'] = "test/upload"; 
-			$_SESSION['KCFINDER']['uploadDir'] = "../test/upload";
-			$deniedExts = implode(" ", vglobal('upload_badext'));
-			$_SESSION['KCFINDER']['deniedExts'] = $deniedExts;
-			// End
-
-			//Track the login History
-			$moduleModel = Users_Module_Model::getInstance('Users');
-			$moduleModel->saveLoginHistory($user->column_fields['user_name']);
-			//End
-						
-			if(isset($_SESSION['return_params'])){
-				$return_params = $_SESSION['return_params'];
+			if (!empty($row['totp_enabled']) && !empty($row['totp_secret'])) {
+				// Hold credentials in session until 2FA is verified
+				session_regenerate_id(true);
+				$_SESSION['2fa_pending_userid']   = $userid;
+				$_SESSION['2fa_pending_username'] = $username;
+				$_SESSION['2fa_pending_skin']     = $request->get('skin');
+				header('Location: index.php?module=Users&view=TwoFactorAuth');
+				exit();
 			}
 
-			header ('Location: index.php?module=Users&parent=Settings&view=SystemSetup');
-			exit();
+			// No 2FA — complete login immediately
+			$this->completeLogin($userid, $username, $request->get('skin'));
 		} else {
-			header ('Location: index.php?module=Users&parent=Settings&view=Login&error=login');
+			header('Location: index.php?module=Users&parent=Settings&view=Login&error=login');
 			exit;
 		}
 	}
 
+	public static function completeLogin($userid, $username, $skin = '') {
+		session_regenerate_id(true);
+
+		Vtiger_Session::set('AUTHUSERID', $userid);
+
+		$db = PearDatabase::getInstance();
+		$db->pquery('UPDATE vtiger_users SET current_session_id = ? WHERE id = ?', array(session_id(), $userid));
+
+		$_SESSION['authenticated_user_id']       = $userid;
+		$_SESSION['app_unique_key']              = vglobal('application_unique_key');
+		$_SESSION['authenticated_user_language'] = vglobal('default_language');
+		$_SESSION['authenticated_user_skin']     = $skin;
+
+		$_SESSION['KCFINDER']              = array();
+		$_SESSION['KCFINDER']['disabled']  = false;
+		$_SESSION['KCFINDER']['uploadURL'] = 'test/upload';
+		$_SESSION['KCFINDER']['uploadDir'] = '../test/upload';
+		$_SESSION['KCFINDER']['deniedExts'] = implode(' ', vglobal('upload_badext'));
+
+		$moduleModel = Users_Module_Model::getInstance('Users');
+		$moduleModel->saveLoginHistory($username);
+
+		header('Location: index.php?module=Users&parent=Settings&view=SystemSetup');
+		exit();
+	}
 }
