@@ -23,6 +23,11 @@
    <input type="hidden" value="{$LISTVIEW_ENTRIES_COUNT}" id="noOfEntries">
 
    <div class="col-sm-12 col-xs-12 ">
+        <div style="margin-bottom:12px;">
+            <a href="index.php?module=LoginHistory&parent=Settings&view=Dashboard" class="btn btn-primary">
+                <i class="fa fa-bar-chart"></i> Analytics Dashboard
+            </a>
+        </div>
         <div id="listview-actions" class="listview-actions-container">
             <div class = "row">
                 <div class='col-md-6 usersListDiv'>
