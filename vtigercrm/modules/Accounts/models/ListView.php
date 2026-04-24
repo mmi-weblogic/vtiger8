@@ -73,4 +73,15 @@ class Accounts_ListView_Model extends Vtiger_ListView_Model {
 		}
 		return $links;
 	}
+
+	public function getQuery() {
+		$query  = parent::getQuery();
+		$filter = isset($_REQUEST['engagement_score_filter']) ? (int)$_REQUEST['engagement_score_filter'] : 0;
+		if ($filter >= 1 && $filter <= 5) {
+			$query = preg_replace('/\sWHERE\s/i',
+				" INNER JOIN vtiger_engagement_score veng ON veng.crmid = vtiger_crmentity.crmid AND veng.star_score = $filter AND veng.module = 'Accounts' WHERE ",
+				$query, 1);
+		}
+		return $query;
+	}
 }
